@@ -1,0 +1,5 @@
+fah_target,sensitivity_mean,sensitivity_std,achieved_fah_mean,interpretation
+0.1,0.4375,0.3301,0.0000,Strict: high specificity but many missed seizures
+0.2,0.4375,0.3301,0.0341,Moderate-strict: similar sensitivity with slight FAH
+0.5,0.4667,0.3062,0.2877,Balanced: modest improvement in sensitivity
+1.0,0.5143,0.2804,0.6505,Permissive: best sensitivity at cost of more false alarms

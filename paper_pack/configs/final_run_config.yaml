@@ -1,0 +1,195 @@
+# =============================================================================
+# Full CHB-MIT Run Configuration
+# For full-scale LOSO cross-validation with all subjects
+# Optimized for: RTX 3070 (8GB), 32GB RAM, Cache V2 (memmap)
+# =============================================================================
+
+experiment_name: "full_chbmit_loso"
+seed: 42
+
+# =============================================================================
+# DATA
+# =============================================================================
+data:
+  # All subjects will be auto-discovered from data_root
+  subjects: null  # Use "all" in command line
+  data_root: "data/chbmit_raw"
+  cache_root: "data/chbmit_cache_v2"
+  cache_format: "v2"  # Use memmap-backed Cache V2
+
+# =============================================================================
+# SIGNAL PROCESSING
+# =============================================================================
+signal:
+  target_sfreq: 256
+  lowcut: 0.5
+  highcut: 50.0
+  notch_freq: 60.0
+  amp_uv_thresh: 500
+
+# =============================================================================
+# WINDOWING
+# =============================================================================
+windowing:
+  window_sec: 30
+  step_sec: 15
+  preictal_min: 30
+  gap_sec: 300         # 5 min gap before seizure
+  postictal_min: 30
+  interictal_buffer_min: 60
+  tau_sec: 1800        # 30 min for soft label decay
+
+# =============================================================================
+# FEATURES
+# =============================================================================
+features:
+  compute_bandpower: true
+  compute_ratios: true
+  compute_line_length: true
+  compute_spectral_entropy: true
+  compute_hjorth: true
+  compute_kurtosis: true
+  bands:
+    delta: [0.5, 4]
+    theta: [4, 8]
+    alpha: [8, 13]
+    beta: [13, 30]
+    gamma: [30, 50]
+
+# =============================================================================
+# SPLIT (will be overridden by LOSO harness)
+# =============================================================================
+split:
+  mode: "cross_subject"
+  # These are placeholders - LOSO will set them per fold
+  train_subjects: []
+  val_subjects: []
+  test_subjects: []
+  within_train_ratio: 0.7
+  seed: 42
+
+# =============================================================================
+# SPECTROGRAM (not used in V2 cache, but needed for model config)
+# =============================================================================
+spectrogram:
+  n_fft: 256
+  hop_length: 64
+  win_length: 256
+  log_offset: 1.0
+
+# =============================================================================
+# MODEL
+# =============================================================================
+model:
+  type: "fusion_net"
+  use_features: true
+  
+  # CNN branch
+  cnn_channels: [32, 64, 128]
+  cnn_kernel_sizes: [3, 3, 3]
+  
+  # MLP branch
+  mlp_hidden: [256, 128]
+  
+  # Fusion
+  fusion_hidden: 128
+  dropout: 0.3
+  
+  # Input dimensions (will be inferred from data)
+  n_features: 30
+  seq_len: 7680
+  n_channels: 18
+
+# =============================================================================
+# TRAINING
+# =============================================================================
+training:
+  batch_size: 256        # Max for RTX 3070 with AMP
+  epochs: 30
+  learning_rate: 0.0005  # Moderate learning rate
+  weight_decay: 0.0001
+  use_amp: true          # Re-enabled - NaN was from features, not AMP
+  grad_clip: 1.0
+  early_stopping_patience: 10
+  gradient_accumulation_steps: 1
+  
+  # Scheduler
+  scheduler: "cosine"
+  scheduler_warmup_epochs: 2
+  
+  # Soft label weight
+  lambda_soft: 0.5
+  weight_by_proximity: true
+  
+  # DataLoader settings for Cache V2
+  # Note: num_workers=0 required on Windows due to memmap pickling issues
+  num_workers: 0         # Windows: memmap can't be pickled for multiprocessing
+  pin_memory: true
+  persistent_workers: false
+
+# =============================================================================
+# LOSS FUNCTION
+# =============================================================================
+loss:
+  type: "focal"          # Better for imbalanced data
+  focal_alpha: 0.25
+  focal_gamma: 2.0
+  regression_weight: 0.1
+  soft_weight: 0.0
+
+# =============================================================================
+# AUGMENTATION (training only)
+# =============================================================================
+augmentation:
+  enabled: true
+  gaussian_noise_std: 0.01
+  time_shift_max_samples: 64
+  amplitude_scale_range: [0.95, 1.05]
+  channel_dropout_prob: 0.05
+
+# =============================================================================
+# ALARM POST-PROCESSING
+# =============================================================================
+alarm:
+  # Risk smoothing (reduces FAH significantly)
+  smoothing_method: "ema"
+  smoothing_alpha: 0.2
+  smoothing_window: 6
+  
+  # Persistence filter
+  persistence_k: 3       # Require 3 consecutive windows
+  
+  # Hysteresis
+  use_hysteresis: true
+  hysteresis_gap: 0.1
+  
+  # Refractory period
+  refractory_sec: 1200   # 20 minutes
+
+# =============================================================================
+# EVALUATION
+# =============================================================================
+evaluation:
+  fah_targets: [0.1, 0.2, 0.5, 1.0]
+  threshold_sweep_points: 100
+  
+# =============================================================================
+# LOGGING
+# =============================================================================
+logging:
+  save_every_n_epochs: 5
+  log_every_n_steps: 50
+  save_best_only: true
+  save_last: true
+  run_dir: "runs"
+  experiment_name: "full_loso"
+
+# =============================================================================
+# OUTPUTS
+# =============================================================================
+output:
+  run_dir: "runs"
+  save_best_by_auc: true
+  save_best_by_fah: true
+  save_training_curves: true
+  save_manifest: true

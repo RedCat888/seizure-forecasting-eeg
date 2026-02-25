@@ -1,0 +1,6 @@
+fold,avg_data_ms,avg_h2d_ms,avg_fwd_ms,avg_bwd_ms,avg_step_ms,bottleneck
+chb01_early_epochs,521.1,0.23,67.2,49.8,638.4,data loading
+chb01_late_epochs,33.4,0.34,40.7,40.5,115.0,balanced
+chb24_all_epochs,255.4,0.18,40.5,39.9,336.0,data loading
+chb24_late_epochs,30.6,0.29,40.6,40.6,112.1,balanced
+note:data_ms_dominates_early_then_stabilizes_as_OS_cache_warms,,,,,"Data loading is the primary bottleneck in early steps; GPU forward/backward are stable ~40ms each"

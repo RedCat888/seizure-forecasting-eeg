@@ -1,0 +1,22 @@
+metric,value
+cache_version,V2 (memmap)
+n_subjects,24
+total_windows,66695
+preictal_windows,3107
+interictal_windows,63588
+excluded_windows,27847
+preictal_pct,4.66
+interictal_pct,95.34
+class_imbalance_ratio,20.47
+window_sec,30
+step_sec,15
+target_sfreq_hz,256
+n_channels,18
+samples_per_window,7680
+n_handcrafted_features,30
+spectrogram_shape,"[18, 129, 117]"
+data_dtype,float32
+preictal_horizon_min,30
+gap_sec,300
+postictal_min,30
+interictal_buffer_min,60

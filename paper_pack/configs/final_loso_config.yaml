@@ -1,0 +1,134 @@
+seed: 42
+experiment_name: full_chbmit_loso
+data:
+  data_root: data/chbmit_raw
+  cache_root: data/chbmit_cache_v2
+  cache_format: v2
+  subjects: null
+signal:
+  target_sfreq: 256
+  lowcut: 0.5
+  highcut: 50.0
+  notch_freq: 60.0
+  amp_uv_thresh: 500
+windowing:
+  window_sec: 30
+  step_sec: 15
+  preictal_min: 30
+  gap_sec: 300
+  postictal_min: 30
+  interictal_buffer_min: 60
+  tau_sec: 1800
+features:
+  compute_bandpower: true
+  compute_ratios: true
+  compute_line_length: true
+  compute_spectral_entropy: true
+  compute_hjorth: true
+  compute_kurtosis: true
+  nan_fill_value: 0.0
+  bands:
+    delta:
+    - 0.5
+    - 4
+    theta:
+    - 4
+    - 8
+    alpha:
+    - 8
+    - 13
+    beta:
+    - 13
+    - 30
+    gamma:
+    - 30
+    - 50
+spectrogram:
+  n_fft: 256
+  hop_length: 64
+  win_length: 256
+  log_offset: 1.0
+split:
+  mode: cross_subject
+  train_subjects: []
+  val_subjects: []
+  test_subjects: []
+  within_train_ratio: 0.7
+  seed: 42
+model:
+  type: fusion_net
+  use_features: true
+  cnn_channels:
+  - 32
+  - 64
+  - 128
+  cnn_kernel_sizes:
+  - 3
+  - 3
+  - 3
+  mlp_hidden:
+  - 256
+  - 128
+  fusion_hidden: 128
+  dropout: 0.3
+  n_features: 30
+  seq_len: 7680
+  n_channels: 18
+training:
+  batch_size: 256
+  epochs: 20
+  learning_rate: 0.0005
+  weight_decay: 0.0001
+  use_amp: true
+  grad_clip: 1.0
+  early_stopping_patience: 10
+  gradient_accumulation_steps: 1
+  scheduler: cosine
+  scheduler_warmup_epochs: 2
+  lambda_soft: 0.5
+  weight_by_proximity: true
+  num_workers: 4
+  pin_memory: true
+  persistent_workers: false
+loss:
+  type: focal
+  focal_alpha: 0.25
+  focal_gamma: 2.0
+  regression_weight: 0.1
+  soft_weight: 0.0
+augmentation:
+  enabled: true
+  gaussian_noise_std: 0.01
+  time_shift_max_samples: 64
+  amplitude_scale_range:
+  - 0.95
+  - 1.05
+  channel_dropout_prob: 0.05
+alarm:
+  smoothing_method: ema
+  smoothing_alpha: 0.2
+  smoothing_window: 6
+  persistence_k: 3
+  use_hysteresis: true
+  hysteresis_gap: 0.1
+  refractory_sec: 1200
+evaluation:
+  fah_targets:
+  - 0.1
+  - 0.2
+  - 0.5
+  - 1.0
+  threshold_sweep_points: 100
+logging:
+  save_every_n_epochs: 5
+  log_every_n_steps: 50
+  save_best_only: true
+  save_last: true
+  run_dir: runs
+  experiment_name: full_loso
+output:
+  run_dir: runs
+  save_best_by_auc: true
+  save_best_by_fah: true
+  save_training_curves: true
+  save_manifest: true
