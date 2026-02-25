@@ -1,0 +1,7 @@
+metric,value
+n_windows,66695
+n_preictal,3107
+n_interictal,63588
+n_excluded,27847
+preictal_pct,4.66
+n_subjects,24

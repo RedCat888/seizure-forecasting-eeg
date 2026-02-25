@@ -1,0 +1,193 @@
+# Small run configuration for fast iteration and testing
+# Uses only 5 subjects, fewer epochs, smaller model
+
+# =============================================================================
+# DATA PATHS
+# =============================================================================
+data:
+  raw_root: "data/chbmit_raw"
+  cache_root: "data/chbmit_cache"
+  subjects: ["chb01", "chb02", "chb03", "chb05", "chb10"]
+
+# =============================================================================
+# SIGNAL PROCESSING
+# =============================================================================
+signal:
+  target_sfreq: 256
+  bandpass_low: 0.5
+  bandpass_high: 45.0
+  notch_freq: 60.0
+  notch_width: 2.0
+  amp_uv_thresh: 500.0
+
+# =============================================================================
+# WINDOWING & LABELING
+# =============================================================================
+windowing:
+  window_sec: 10.0
+  step_sec: 5.0
+  preictal_min: 10
+  gap_sec: 30
+  postictal_min: 10
+  interictal_buffer_min: 30
+  tau_sec: 120
+
+# =============================================================================
+# FEATURE EXTRACTION
+# =============================================================================
+features:
+  bands:
+    delta: [0.5, 4.0]
+    theta: [4.0, 8.0]
+    alpha: [8.0, 12.0]
+    beta: [12.0, 30.0]
+    gamma: [30.0, 45.0]
+  
+  compute_bandpower: true
+  compute_ratios: true
+  compute_line_length: true
+  compute_spectral_entropy: true
+  compute_hjorth: true
+  compute_kurtosis: true
+
+# =============================================================================
+# SPECTROGRAM
+# =============================================================================
+spectrogram:
+  n_fft: 256
+  hop_length: 64
+  win_length: 256
+  log_offset: 1.0
+
+# =============================================================================
+# DATA SPLITTING (small subset)
+# =============================================================================
+split:
+  # Mode: "cross_subject" (patient-wise) or "within_subject" (patient-specific)
+  mode: "cross_subject"
+  
+  # Cross-subject mode: train/val/test use different subjects
+  train_subjects: ["chb01", "chb02", "chb03"]
+  val_subjects: ["chb05"]
+  test_subjects: ["chb10"]
+  
+  # Within-subject mode: train/test on same subject, split by time
+  within_subject_id: "chb01"  # Subject for within-subject mode
+  within_train_ratio: 0.7     # Fraction of files for training
+  
+  seed: 42
+
+# =============================================================================
+# BASELINE MODEL
+# =============================================================================
+baseline:
+  model_type: "xgboost"
+  xgb_n_estimators: 100
+  xgb_max_depth: 4
+  xgb_learning_rate: 0.1
+  mlp_hidden_dims: [64, 32]
+  mlp_dropout: 0.3
+
+# =============================================================================
+# DEEP MODEL (smaller for fast iteration)
+# =============================================================================
+model:
+  cnn_channels: [16, 32, 64, 128]
+  cnn_kernel_size: 3
+  cnn_pool_size: 2
+  cnn_embed_dim: 64
+  
+  feature_hidden_dims: [32, 32]
+  feature_embed_dim: 32
+  
+  fusion_hidden_dims: [64, 32]
+  dropout: 0.3
+  
+  use_features: true
+
+# =============================================================================
+# TRAINING (fast iteration)
+# PERFORMANCE: batch_size increased from 32 to 256 for better GPU utilization
+# RTX 3070 (8GB) can handle 256+ with EEG data
+# =============================================================================
+training:
+  epochs: 10
+  batch_size: 256  # PERF: Increased from 32 for better GPU util
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  
+  scheduler: "cosine"
+  scheduler_warmup_epochs: 2
+  
+  use_amp: true
+  gradient_accumulation_steps: 1
+  
+  early_stopping_patience: 5
+  
+  lambda_soft: 0.5
+  weight_by_proximity: true
+
+# =============================================================================
+# LOSS FUNCTION
+# =============================================================================
+loss:
+  type: "bce"  # "bce" or "focal"
+  focal_alpha: 0.25
+  focal_gamma: 2.0
+
+# =============================================================================
+# AUGMENTATION (training only)
+# =============================================================================
+augmentation:
+  enabled: false
+  gaussian_noise_std: 0.01
+  time_shift_max_samples: 128
+  amplitude_scale_range: [0.9, 1.1]
+  channel_dropout_prob: 0.1
+
+# =============================================================================
+# ALARM POST-PROCESSING
+# =============================================================================
+alarm:
+  # Risk smoothing
+  smoothing_method: null  # "ema" or "moving_avg" or null
+  smoothing_alpha: 0.2    # For EMA
+  smoothing_window: 6     # For moving average
+  
+  # Persistence filter
+  persistence_k: 1        # Require K consecutive windows (1 = disabled)
+  
+  # Hysteresis
+  use_hysteresis: false
+  hysteresis_gap: 0.1     # Reset threshold = trigger - gap
+  
+  # Refractory period
+  refractory_sec: 1200    # 20 minutes
+
+# =============================================================================
+# EVALUATION
+# =============================================================================
+evaluation:
+  threshold: 0.5
+  refractory_min: 20
+  threshold_sweep: [0.3, 0.5, 0.7]
+  fah_targets: [0.1, 0.2, 0.5, 1.0]
+  preictal_window_sec: 600  # 10 min before seizure counts as TP
+
+# =============================================================================
+# LOGGING
+# =============================================================================
+logging:
+  run_dir: "runs"
+  experiment_name: "small_run"
+  log_interval: 20
+  save_best_only: true
+  save_every_n_epochs: 2
+
+# =============================================================================
+# DEMO
+# =============================================================================
+demo:
+  default_threshold: 0.5
+  default_speed: 1.0
+  channels_to_display: 8

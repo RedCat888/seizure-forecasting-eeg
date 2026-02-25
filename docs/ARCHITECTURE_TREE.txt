@@ -1,0 +1,138 @@
+================================================================================
+  ISP Project — Technical Architecture Tree
+  Generated: 2026-02-25
+  Filters: excludes venv/, __pycache__/, .pyc, raw EEG data (chb01-24),
+           individual run folders (37 total), per-fold perf CSVs, large PNGs
+================================================================================
+
+isp/
+├── pyproject.toml                          # Project metadata & dependencies
+├── setup.py                                # Package installer entry point
+├── requirements.txt                        # Pinned pip dependencies
+├── README.md                               # Project overview & usage
+├── LICENSE                                 # License file
+├── .gitignore                              # Git ignore rules
+│
+├── configs/                                # YAML experiment configurations
+│   ├── default.yaml                        #   Default hyperparameters
+│   ├── full_run.yaml                       #   Full LOSO cross-validation config
+│   ├── medium_run.yaml                     #   Medium-scale experiment config
+│   └── small_run.yaml                      #   Quick debugging / smoke test config
+│
+├── src/                                    # Core library (Python package)
+│   ├── __init__.py
+│   │
+│   ├── chbmit/                             # CHB-MIT dataset parsing
+│   │   ├── __init__.py
+│   │   ├── indexing.py                     #   File discovery & seizure indexing
+│   │   └── parse_summary.py               #   Summary-file parser (seizure annotations)
+│   │
+│   ├── data/                               # Data pipeline
+│   │   ├── __init__.py
+│   │   ├── augmentation.py                 #   EEG data augmentation strategies
+│   │   ├── cache_v2.py                     #   Preprocessed-window disk cache
+│   │   ├── cache_v2_worker_safe.py         #   Worker-safe cache for DataLoader
+│   │   ├── dataset.py                      #   PyTorch Dataset + DataLoader factories
+│   │   └── windowing.py                    #   Sliding-window segmentation logic
+│   │
+│   ├── features/                           # Feature extraction
+│   │   ├── __init__.py
+│   │   └── handcrafted.py                  #   Statistical & spectral EEG features
+│   │
+│   ├── models/                             # Neural network architectures
+│   │   ├── __init__.py
+│   │   ├── baseline.py                     #   Handcrafted-feature MLP/LogReg baseline
+│   │   └── fusion_net.py                   #   Multi-branch CNN + feature fusion model
+│   │
+│   ├── signal/                             # Signal processing
+│   │   ├── __init__.py
+│   │   ├── preprocess.py                   #   Band-pass filtering, re-referencing, etc.
+│   │   └── spectrograms.py                 #   STFT / spectrogram generation
+│   │
+│   ├── train/                              # Training & evaluation
+│   │   ├── __init__.py
+│   │   ├── alarm_eval.py                   #   Event-level alarm evaluation (OVLP metric)
+│   │   ├── calibration.py                  #   Probability calibration (Platt / isotonic)
+│   │   ├── loops.py                        #   Train / validation epoch loops
+│   │   ├── losses.py                       #   Custom losses (focal, class-weighted, etc.)
+│   │   ├── metrics.py                      #   Window-level metrics (sens, spec, AUC, …)
+│   │   └── threshold_tuning.py             #   Optimal threshold search (FA/h target)
+│   │
+│   └── utils/                              # Shared utilities
+│       ├── __init__.py
+│       ├── config.py                       #   YAML config loading & merging
+│       ├── config_defaults.py              #   Default config schema & values
+│       ├── logging.py                      #   Structured logging setup
+│       ├── paths.py                        #   Path resolution helpers
+│       └── seed.py                         #   RNG seed management
+│
+├── scripts/                                # Executable entry-point scripts
+│   ├── __init__.py
+│   ├── build_cache.py                      #   Preprocess & cache all EEG windows
+│   ├── cache_report.py                     #   Print cache statistics
+│   ├── eval.py                             #   Single-model evaluation
+│   ├── full_eval.py                        #   Multi-model / multi-fold evaluation
+│   ├── generate_summary.py                 #   Aggregate results into summary tables
+│   ├── label_sanity.py                     #   Label distribution sanity checks + plots
+│   ├── make_figures.py                     #   Generate publication-ready figures
+│   ├── run_ablations.py                    #   Ablation study orchestrator
+│   ├── run_experiments.py                  #   Main experiment launcher
+│   ├── run_loso.py                         #   Leave-One-Subject-Out CV runner
+│   ├── smoke_test.py                       #   Quick end-to-end pipeline sanity test
+│   ├── train_baseline.py                   #   Train handcrafted-feature baseline
+│   ├── train_deep.py                       #   Train deep fusion model
+│   └── verify_dataset.py                   #   Dataset integrity verification
+│
+├── app/                                    # Interactive demo / dashboard
+│   ├── __init__.py
+│   └── app.py                              #   Streamlit / Gradio app entry point
+│
+├── data/                                   # Data directory (large, git-ignored)
+│   ├── .gitkeep
+│   ├── chbmit_raw/                         #   Raw CHB-MIT EEG recordings
+│   │   └── chb01/ … chb24/                #     24 patient directories (~2.8 GB)
+│   ├── chbmit_cache/                       #   Preprocessed window cache (v1)
+│   └── chbmit_cache_v2/                    #   Preprocessed window cache (v2)
+│
+├── runs/                                   # Experiment outputs (37 run dirs)
+│   │   Each run contains: checkpoints/, logs/, eval_results/
+│   ├── baseline_20260114_*/                #   Baseline model runs
+│   ├── deep_model_20260114_*/              #   Deep model development runs
+│   ├── deep_within_subject_20260114_*/     #   Within-subject evaluation runs
+│   ├── deep_cross_subject_20260114_*/      #   Cross-subject evaluation runs
+│   ├── loso_20260114_*/ … loso_20260115_*/ #   LOSO CV folds (16 runs)
+│   ├── small_run_20260114_*/               #   Quick debug runs
+│   ├── medium_run_20260114_*/              #   Medium-scale runs
+│   └── smoke_test/                         #   Smoke test output
+│
+├── reports/                                # Analysis outputs
+│   ├── EXPERIMENT_SUMMARY.md               #   High-level results narrative
+│   ├── PERFORMANCE_RELIABILITY_REPORT.md   #   Clinical performance analysis
+│   ├── figures/                            #   Generated plots
+│   │   ├── FAH_sensitivity_tradeoff.png    #     FA/h vs sensitivity trade-off
+│   │   ├── label_timeline.png              #     Seizure label timeline
+│   │   ├── psd_before_after.png            #     Power spectral density comparison
+│   │   ├── raw_vs_preprocessed_eeg.png     #     Raw vs cleaned EEG signals
+│   │   ├── spectrogram_example.png         #     Example spectrogram
+│   │   ├── threshold_vs_FAH_curve.png      #     Threshold sweep: FA/h
+│   │   ├── threshold_vs_sensitivity_curve.png  # Threshold sweep: sensitivity
+│   │   └── label_sanity_chb*.png           #     Per-patient label sanity plots (3)
+│   └── tables/                             #   Result tables & logs
+│       ├── alarm_ablation.csv              #     Alarm-threshold ablation results
+│       ├── baseline_metrics.csv            #     Baseline model metrics
+│       ├── loso_results.csv                #     Per-fold LOSO results
+│       ├── loso_summary.csv                #     Aggregated LOSO summary
+│       ├── loso_clinical_summary.csv       #     Clinical metrics per subject
+│       ├── summary_results.csv             #     Final summary table
+│       ├── window_counts.csv               #     Train/val window counts
+│       ├── dataset_summary.txt             #     Dataset statistics
+│       ├── final_summary.txt               #     Final aggregated summary
+│       ├── cache_report_full.txt           #     Cache diagnostics
+│       ├── channel_log.csv                 #     EEG channel selection log
+│       └── perf_log_fold_chb*.csv          #     Per-fold training logs (24 files)
+│
+└── docs/                                   # Documentation
+    ├── DATA_DOWNLOAD.md                    #   How to obtain CHB-MIT data
+    ├── IMPROVEMENTS.md                     #   Roadmap & improvement ideas
+    ├── LABELING_SCHEMA.md                  #   Seizure labeling methodology
+    └── STATUS_AUDIT.md                     #   Project status & audit notes

@@ -1,0 +1,168 @@
+# Default configuration for full seizure forecasting training
+# Designed for RTX 3070 (8GB VRAM) with 32GB RAM
+
+# =============================================================================
+# DATA PATHS
+# =============================================================================
+data:
+  raw_root: "data/chbmit_raw"
+  cache_root: "data/chbmit_cache"
+  # Leave empty to use all available subjects
+  subjects: []
+
+# =============================================================================
+# SIGNAL PROCESSING
+# =============================================================================
+signal:
+  target_sfreq: 256          # Target sampling frequency (Hz)
+  bandpass_low: 0.5          # Highpass cutoff (Hz)
+  bandpass_high: 45.0        # Lowpass cutoff (Hz)
+  notch_freq: 60.0           # Notch filter frequency (Hz)
+  notch_width: 2.0           # Notch filter bandwidth (Hz)
+  amp_uv_thresh: 500.0       # Artifact rejection threshold (µV)
+
+# =============================================================================
+# WINDOWING & LABELING
+# =============================================================================
+windowing:
+  window_sec: 10.0           # Window length in seconds
+  step_sec: 5.0              # Window stride in seconds
+  preictal_min: 10           # Preictal horizon (minutes before seizure)
+  gap_sec: 30                # Exclusion gap before onset (seconds)
+  postictal_min: 10          # Postictal exclusion period (minutes)
+  interictal_buffer_min: 30  # Minimum distance from seizure for interictal (minutes)
+  tau_sec: 120               # Soft risk time constant (seconds)
+
+# =============================================================================
+# FEATURE EXTRACTION
+# =============================================================================
+features:
+  # Bandpower frequency bands
+  bands:
+    delta: [0.5, 4.0]
+    theta: [4.0, 8.0]
+    alpha: [8.0, 12.0]
+    beta: [12.0, 30.0]
+    gamma: [30.0, 45.0]
+  
+  # Which features to compute
+  compute_bandpower: true
+  compute_ratios: true
+  compute_line_length: true
+  compute_spectral_entropy: true
+  compute_hjorth: true
+  compute_kurtosis: true
+
+# =============================================================================
+# SPECTROGRAM (for deep model)
+# =============================================================================
+spectrogram:
+  n_fft: 256
+  hop_length: 64
+  win_length: 256
+  log_offset: 1.0            # log(1 + magnitude)
+
+# =============================================================================
+# DATA SPLITTING
+# =============================================================================
+split:
+  # Patient-wise split (no leakage)
+  train_subjects: ["chb01", "chb02", "chb03", "chb05", "chb06", "chb07", "chb08", 
+                   "chb09", "chb10", "chb11", "chb13", "chb14", "chb15"]
+  val_subjects: ["chb16", "chb17", "chb18"]
+  test_subjects: ["chb19", "chb20", "chb21", "chb22", "chb23"]
+  
+  # Seed for any random operations
+  seed: 42
+
+# =============================================================================
+# BASELINE MODEL (Handcrafted features)
+# =============================================================================
+baseline:
+  model_type: "xgboost"      # "logreg", "xgboost", or "mlp"
+  
+  # XGBoost params
+  xgb_n_estimators: 200
+  xgb_max_depth: 6
+  xgb_learning_rate: 0.1
+  
+  # MLP params
+  mlp_hidden_dims: [128, 64]
+  mlp_dropout: 0.3
+
+# =============================================================================
+# DEEP MODEL (CNN + Feature Fusion)
+# =============================================================================
+model:
+  # CNN encoder for spectrograms
+  cnn_channels: [32, 64, 128, 256]
+  cnn_kernel_size: 3
+  cnn_pool_size: 2
+  cnn_embed_dim: 128
+  
+  # Feature MLP branch
+  feature_hidden_dims: [64, 64]
+  feature_embed_dim: 64
+  
+  # Fusion head
+  fusion_hidden_dims: [128, 64]
+  dropout: 0.3
+  
+  # Use features in fusion (set false for spectrogram-only)
+  use_features: true
+
+# =============================================================================
+# TRAINING
+# =============================================================================
+training:
+  epochs: 50
+  batch_size: 64
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  
+  # Learning rate scheduler
+  scheduler: "cosine"        # "cosine", "step", or "none"
+  scheduler_warmup_epochs: 5
+  
+  # Mixed precision (AMP)
+  use_amp: true
+  
+  # Gradient accumulation (effective batch = batch_size * accum_steps)
+  gradient_accumulation_steps: 1
+  
+  # Early stopping
+  early_stopping_patience: 10
+  
+  # Loss weights
+  lambda_soft: 0.5           # Weight for soft risk regression loss
+  
+  # Sample weighting for preictal
+  weight_by_proximity: true  # Higher weight for windows closer to onset
+
+# =============================================================================
+# EVALUATION / ALARM METRICS
+# =============================================================================
+evaluation:
+  threshold: 0.5             # Risk threshold for alarm
+  refractory_min: 20         # Minimum time between alarms (minutes)
+  
+  # Multiple thresholds to evaluate
+  threshold_sweep: [0.3, 0.4, 0.5, 0.6, 0.7]
+
+# =============================================================================
+# LOGGING & CHECKPOINTS
+# =============================================================================
+logging:
+  run_dir: "runs"
+  experiment_name: "full_run"
+  log_interval: 50           # Steps between logs
+  save_best_only: true
+  save_every_n_epochs: 5
+
+# =============================================================================
+# DEMO APP
+# =============================================================================
+demo:
+  default_threshold: 0.5
+  default_speed: 1.0
+  channels_to_display: 8     # Number of EEG channels to show

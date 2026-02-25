@@ -1,0 +1,19 @@
+CHB-MIT Cache V2 Report
+==================================================
+
+Total Windows:     66,695
+Preictal Windows:  3,107
+Interictal Windows:63,588
+Preictal %:        4.66%
+
+Subjects:          24
+Channels:          18
+Window Length:     7680 samples (30.0s @ 256Hz)
+Features:          30
+Storage Dtype:     float16
+
+Disk Size:         17.18 GB
+RAM per Batch:     135.0 MB (batch_size=256)
+Memmap Backed:     Yes (minimal RAM usage)
+
+Subjects: chb01, chb02, chb03, chb04, chb05, chb06, chb07, chb08, chb09, chb10, chb11, chb12, chb13, chb14, chb15, chb16, chb17, chb18, chb19, chb20, chb21, chb22, chb23, chb24
